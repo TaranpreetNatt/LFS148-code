@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 import psutil
 from opentelemetry import metrics
 
@@ -24,6 +25,8 @@ from opentelemetry.sdk.metrics.view import (
 )
 from resource_utils import create_resource
 
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+
 
 def create_views() -> list[View]:
     views = []
@@ -35,7 +38,7 @@ def create_views() -> list[View]:
         name="test",
     )
 
-    views.append(traffic_volume_change_name) # type: ignore
+    views.append(traffic_volume_change_name)  # type: ignore
 
     # drop entire intrument
     drop_instrument = View(
@@ -43,7 +46,7 @@ def create_views() -> list[View]:
         instrument_name="process.cpu.utilization",
         aggregation=DropAggregation(),
     )
-    views.append(drop_instrument) # type: ignore
+    views.append(drop_instrument)  # type: ignore
 
     # change the aggregation (buckets) for all histogram instruments
     histrogram_explicit_buckets = View(
@@ -51,13 +54,13 @@ def create_views() -> list[View]:
         instrument_name="*",  #  supports wildcard pattern matching
         aggregation=ExplicitBucketHistogramAggregation((1, 21, 50, 100, 1000)),
     )
-    views.append(histrogram_explicit_buckets) # type: ignore
+    views.append(histrogram_explicit_buckets)  # type: ignore
 
-    return views # type: ignore
+    return views  # type: ignore
 
 
 def create_otlp_reader(export_interval: int) -> MetricReader:
-    exporter = ConsoleMetricExporter()
+    exporter = OTLPMetricExporter(insecure=True)
     reader = PeriodicExportingMetricReader(
         exporter=exporter, export_interval_millis=export_interval
     )
@@ -70,9 +73,7 @@ def create_meter(name: str, version: str) -> metrics.Meter:
 
     otlp_reader = create_otlp_reader(5000)
 
-    provider = MeterProvider(
-        metric_readers=[otlp_reader], resource=rc, views=views
-    )
+    provider = MeterProvider(metric_readers=[otlp_reader], resource=rc, views=views)
     metrics.set_meter_provider(provider)
     meter = metrics.get_meter(name, version)
     return meter

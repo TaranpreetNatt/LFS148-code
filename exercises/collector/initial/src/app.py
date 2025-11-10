@@ -27,17 +27,20 @@ app = Flask(__name__)
 logger = logging.getLogger()
 logger.addHandler(handler)
 
+
 @app.before_request
 def attach_context_with_trace_header():
     ctx = extract(request.headers)
     previous_ctx_token = context.attach(ctx)
     request.environ["previous_ctx_token"] = previous_ctx_token
 
+
 @app.teardown_request
 def restore_context_on_teardown(err):
     previous_ctx_token = request.environ.get("previous_ctx_token", None)
     if previous_ctx_token:
         context.detach(previous_ctx_token)
+
 
 @app.before_request
 def before_request():
@@ -59,6 +62,7 @@ def after_request(response: Response) -> Response:
     )
     return response
 
+
 @tracer.start_as_current_span("users")
 @app.route("/users", methods=["GET"])
 def get_user():
@@ -74,6 +78,7 @@ def get_user():
     logging.debug(f"Generated response {response}")
     return response
 
+
 @tracer.start_as_current_span("do_stuff")
 def do_stuff():
     time.sleep(0.1)
@@ -85,6 +90,7 @@ def do_stuff():
     logging.info(str(response.json()))
     return response
 
+
 @tracer.start_as_current_span("index")
 @app.route("/")
 def index():
@@ -93,7 +99,7 @@ def index():
         {
             SpanAttributes.HTTP_REQUEST_METHOD: request.method,
             SpanAttributes.URL_PATH: request.path,
-            SpanAttributes.HTTP_RESPONSE_STATUS_CODE: 200
+            SpanAttributes.HTTP_RESPONSE_STATUS_CODE: 200,
         }
     )
     do_stuff()
@@ -109,4 +115,4 @@ if __name__ == "__main__":
     rc_instruments = create_resource_instruments(meter)
 
     db = ChaosClient(client=FakerClient())
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)
